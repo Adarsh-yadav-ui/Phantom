@@ -1,36 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💻 Tech Stack:
 
-## Getting Started
+![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white) ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white) ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E) ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54) ![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white) ![Next JS](https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white) ![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?style=for-the-badge&logo=npm&logoColor=white) ![Canva](https://img.shields.io/badge/Canva-%2300C4CC.svg?style=for-the-badge&logo=Canva&logoColor=white) ![Sentry](https://img.shields.io/badge/sentry-%23362D59.svg?style=for-the-badge&logo=sentry&logoColor=white)
 
-First, run the development server:
+# 📊 GitHub Stats:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+![](https://github-readme-stats.vercel.app/api?username=Adarsh-yadav-ui&theme=dark&hide_border=false&include_all_commits=true&count_private=true)<br/>
+![](https://nirzak-streak-stats.vercel.app/?user=Adarsh-yadav-ui&theme=dark&hide_border=false)<br/>
+![](https://github-readme-stats.vercel.app/api/top-langs/?username=Adarsh-yadav-ui&theme=dark&hide_border=false&include_all_commits=true&count_private=true&layout=compact)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🏆 GitHub Trophies
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+![](https://github-profile-trophy.vercel.app/?username=Adarsh-yadav-ui&theme=radical&no-frame=false&no-bg=true&margin-w=4)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### ✍️ Random Dev Quote
 
-## Learn More
+![](https://quotes-github-readme.vercel.app/api?type=horizontal&theme=radical)
 
-To learn more about Next.js, take a look at the following resources:
+### 🔝 Top Contributed Repo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+![](https://github-contributor-stats.vercel.app/api?username=Adarsh-yadav-ui&limit=5&theme=dark&combine_all_yearly_contributions=true)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+[![](https://visitcount.itsvg.in/api?id=Adarsh-yadav-ui&icon=0&color=4)](https://visitcount.itsvg.in)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+<!-- Proudly created with GPRM ( https://gprm.itsvg.in ) -->
