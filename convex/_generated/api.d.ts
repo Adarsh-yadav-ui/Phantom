@@ -8,7 +8,16 @@
  * @module
  */
 
+import type * as channel from "../channel.js";
+import type * as channelMembers from "../channelMembers.js";
+import type * as conversations from "../conversations.js";
+import type * as cult from "../cult.js";
+import type * as cultMembers from "../cultMembers.js";
+import type * as group from "../group.js";
+import type * as groupMembers from "../groupMembers.js";
 import type * as http from "../http.js";
+import type * as messages from "../messages.js";
+import type * as reactions from "../reactions.js";
 import type * as users from "../users.js";
 
 import type {
@@ -18,7 +27,16 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  channel: typeof channel;
+  channelMembers: typeof channelMembers;
+  conversations: typeof conversations;
+  cult: typeof cult;
+  cultMembers: typeof cultMembers;
+  group: typeof group;
+  groupMembers: typeof groupMembers;
   http: typeof http;
+  messages: typeof messages;
+  reactions: typeof reactions;
   users: typeof users;
 }>;
 
