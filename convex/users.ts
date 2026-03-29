@@ -153,4 +153,55 @@ export const store = mutation({
       return;
     }
   },
+
+  
+});
+
+
+
+export const getUserActivity = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const cultMemberships = await ctx.db
+      .query("cultMembers")
+      .withIndex("byUserId", (q) => q.eq("userId", userId))
+      .collect();
+    const cultIds = cultMemberships.map((m) => m.cultId);
+    const myCults = await Promise.all(cultIds.map((id) => ctx.db.get(id)));
+
+    const channelMemberships = await ctx.db
+      .query("channelMembers")
+      .withIndex("byUserId", (q) => q.eq("userId", userId))
+      .collect();
+    const channelIds = channelMemberships.map((m) => m.channelId);
+    const myChannels = await Promise.all(channelIds.map((id) => ctx.db.get(id)));
+
+    const groupMemberships = await ctx.db
+      .query("groupMembers")
+      .withIndex("byUserId", (q) => q.eq("userId", userId))
+      .collect();
+    const groupIds = groupMemberships.map((m) => m.groupId);
+    const myGroups = await Promise.all(groupIds.map((id) => ctx.db.get(id)));
+
+    const dmsAsMemberOne = await ctx.db
+      .query("conversations")
+      .withIndex("byMemberOne", (q) => q.eq("memberOne", userId))
+      .collect();
+    const dmsAsMemberTwo = await ctx.db
+      .query("conversations")
+      .withIndex("byMemberTwo", (q) => q.eq("memberTwo", userId))
+      .collect();
+    const myDMs = [...dmsAsMemberOne, ...dmsAsMemberTwo];
+
+    return {
+      cults: myCults.filter(Boolean),
+      cultCount: myCults.filter(Boolean).length,
+      channels: myChannels.filter(Boolean),
+      channelCount: myChannels.filter(Boolean).length,
+      groups: myGroups.filter(Boolean),
+      groupCount: myGroups.filter(Boolean).length,
+      dms: myDMs,
+      dmCount: myDMs.length,
+    };
+  },
 });
