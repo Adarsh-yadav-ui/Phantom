@@ -7,10 +7,10 @@ export default defineSchema({
   users: defineTable({
     email: v.string(),
     clerkUserId: v.string(),
-    firstName: v.optional(v.string()),
-    lastName: v.optional(v.string()),
-    username: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    firstName: v.string(),
+    lastName: v.string(),
+    username: v.string(),
+    imageUrl: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

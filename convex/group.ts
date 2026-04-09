@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { deleteOldImage, extractStorageIdFromUrl } from "./storage";
+import { Id } from "./_generated/dataModel";
 
 export const getGroup = query({
   args: { groupId: v.id("group") },
@@ -171,6 +173,12 @@ export const deleteGroup = mutation({
       throw new Error("Only group admins can delete the group.");
     }
 
+    // Delete group profile photo from storage
+    const group = await ctx.db.get(groupId);
+    if (group?.groupProfile) {
+      await deleteOldImage(ctx, group.groupProfile);
+    }
+
     const memberships = await ctx.db
       .query("groupMembers")
       .withIndex("byGroupId", (q: any) => q.eq("groupId", groupId))
@@ -178,5 +186,94 @@ export const deleteGroup = mutation({
     await Promise.all(memberships.map((m) => ctx.db.delete(m._id)));
 
     await ctx.db.delete(groupId);
+  },
+});
+
+// ! ─── Storage / Group Profile Photo Upload ────────────────────────────────────
+
+/**
+ * Update group's profile photo after successful upload
+ */
+export const updateGroupProfilePhoto = mutation({
+  args: {
+    groupId: v.id("group"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { groupId, storageId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const membership = await ctx.db
+      .query("groupMembers")
+      .withIndex("byGroupAndUser", (q: any) => q.eq("groupId", groupId).eq("userId", user._id))
+      .unique();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only group admins can update group profile photo.");
+    }
+
+    const group = await ctx.db.get(groupId);
+    if (!group) throw new Error("Group not found");
+
+    // Get the URL of the uploaded file
+    const imageUrl = await ctx.storage.getUrl(storageId);
+    if (!imageUrl) throw new Error("Failed to get uploaded file URL");
+
+    // Delete old profile photo
+    await deleteOldImage(ctx, group.groupProfile);
+
+    // Update the group's profile with the new photo URL
+    await ctx.db.patch(groupId, {
+      groupProfile: imageUrl,
+      updatedAt: Date.now(),
+    });
+
+    return { imageUrl };
+  },
+});
+
+/**
+ * Delete group's profile photo
+ */
+export const deleteGroupProfilePhoto = mutation({
+  args: { groupId: v.id("group") },
+  handler: async (ctx, { groupId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const membership = await ctx.db
+      .query("groupMembers")
+      .withIndex("byGroupAndUser", (q: any) => q.eq("groupId", groupId).eq("userId", user._id))
+      .unique();
+
+    if (!membership || membership.role !== "admin") {
+      throw new Error("Only group admins can delete group profile photo.");
+    }
+
+    const group = await ctx.db.get(groupId);
+    if (!group) throw new Error("Group not found");
+
+    // Delete the file from storage
+    await deleteOldImage(ctx, group.groupProfile);
+
+    // Reset to empty string
+    await ctx.db.patch(groupId, {
+      groupProfile: "",
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });

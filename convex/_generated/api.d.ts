@@ -18,6 +18,7 @@ import type * as groupMembers from "../groupMembers.js";
 import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as reactions from "../reactions.js";
+import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 
 import type {
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   messages: typeof messages;
   reactions: typeof reactions;
+  storage: typeof storage;
   users: typeof users;
 }>;
 
