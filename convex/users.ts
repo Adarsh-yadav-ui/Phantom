@@ -7,6 +7,8 @@ import {
   query,
   QueryCtx,
 } from "./_generated/server";
+import { deleteOldImage } from "./storage";
+import { Id } from "./_generated/dataModel";
 
 export const getUsers = query({
   args: {},
@@ -153,11 +155,7 @@ export const store = mutation({
       return;
     }
   },
-
-  
 });
-
-
 
 export const getUserActivity = query({
   args: { userId: v.id("users") },
@@ -174,7 +172,9 @@ export const getUserActivity = query({
       .withIndex("byUserId", (q) => q.eq("userId", userId))
       .collect();
     const channelIds = channelMemberships.map((m) => m.channelId);
-    const myChannels = await Promise.all(channelIds.map((id) => ctx.db.get(id)));
+    const myChannels = await Promise.all(
+      channelIds.map((id) => ctx.db.get(id)),
+    );
 
     const groupMemberships = await ctx.db
       .query("groupMembers")
@@ -203,5 +203,89 @@ export const getUserActivity = query({
       dms: myDMs,
       dmCount: myDMs.length,
     };
+  },
+});
+
+// ! ─── Storage / Profile Photo Upload ──────────────────────────────────────────
+
+/**
+ * Generate a short-lived upload URL for profile photo uploads
+ */
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Must be authenticated to generate upload URL");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Update user's profile photo URL after successful upload
+ */
+export const updateProfilePhoto = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { storageId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Must be authenticated to update profile photo");
+    }
+
+    // Get the current user
+    const user = await userByClerkUserId(ctx, identity.subject);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Get the URL of the uploaded file
+    const imageUrl = await ctx.storage.getUrl(storageId);
+    if (!imageUrl) {
+      throw new Error("Failed to get uploaded file URL");
+    }
+
+    // Delete old profile photo
+    await deleteOldImage(ctx, user.imageUrl);
+
+    // Update the user's profile with the new photo URL
+    await ctx.db.patch(user._id, {
+      imageUrl: imageUrl,
+      updatedAt: Date.now(),
+    });
+
+    return { imageUrl };
+  },
+});
+
+/**
+ * Delete current user's profile photo
+ */
+export const deleteProfilePhoto = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Must be authenticated to delete profile photo");
+    }
+
+    // Get the current user
+    const user = await userByClerkUserId(ctx, identity.subject);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Delete the file from storage
+    await deleteOldImage(ctx, user.imageUrl);
+
+    // Reset to empty string (will fallback to Clerk's image)
+    await ctx.db.patch(user._id, {
+      imageUrl: "",
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });

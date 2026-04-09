@@ -1,10 +1,14 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { deleteOldImage, extractStorageIdFromUrl } from "./storage";
+import { Id } from "./_generated/dataModel";
 
 async function isCultMember(ctx: any, cultId: any, userId: any) {
   const membership = await ctx.db
     .query("cultMembers")
-    .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+    .withIndex("byCultAndUser", (q: any) =>
+      q.eq("cultId", cultId).eq("userId", userId),
+    )
     .unique();
   return !!membership;
 }
@@ -12,7 +16,9 @@ async function isCultMember(ctx: any, cultId: any, userId: any) {
 async function isCultAdmin(ctx: any, cultId: any, userId: any) {
   const membership = await ctx.db
     .query("cultMembers")
-    .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+    .withIndex("byCultAndUser", (q: any) =>
+      q.eq("cultId", cultId).eq("userId", userId),
+    )
     .unique();
   return membership?.role === "admin";
 }
@@ -25,7 +31,9 @@ async function checkChannelAdmin(ctx: any, channelId: any, userId: any) {
 
   const membership = await ctx.db
     .query("channelMembers")
-    .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", userId))
+    .withIndex("byChannelAndUser", (q: any) =>
+      q.eq("channelId", channelId).eq("userId", userId),
+    )
     .unique();
   return membership?.role === "admin";
 }
@@ -37,7 +45,9 @@ export const getChannelsForCult = query({
   },
   handler: async (ctx, { cultId, userId }) => {
     if (!(await isCultMember(ctx, cultId, userId))) {
-      throw new Error("You must be a member of the cult to access its channels.");
+      throw new Error(
+        "You must be a member of the cult to access its channels.",
+      );
     }
 
     return await ctx.db
@@ -57,7 +67,9 @@ export const getChannel = query({
     if (!channel) throw new Error("Channel not found.");
 
     if (!(await isCultMember(ctx, channel.cultId, userId))) {
-      throw new Error("You must be a member of the cult to access this channel.");
+      throw new Error(
+        "You must be a member of the cult to access this channel.",
+      );
     }
 
     return channel;
@@ -76,7 +88,9 @@ export const getChannelsByType = query({
   },
   handler: async (ctx, { cultId, userId, type }) => {
     if (!(await isCultMember(ctx, cultId, userId))) {
-      throw new Error("You must be a member of the cult to access its channels.");
+      throw new Error(
+        "You must be a member of the cult to access its channels.",
+      );
     }
 
     const channels = await ctx.db
@@ -102,7 +116,9 @@ export const getChannelByJoinCode = query({
     if (!channel) return null;
 
     if (!(await isCultMember(ctx, channel.cultId, userId))) {
-      throw new Error("You must be a member of the cult to access this channel.");
+      throw new Error(
+        "You must be a member of the cult to access this channel.",
+      );
     }
 
     return channel;
@@ -141,7 +157,9 @@ export const createChannel = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -189,7 +207,9 @@ export const updateChannel = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -197,7 +217,9 @@ export const updateChannel = mutation({
     if (!channel) throw new Error("Channel not found.");
 
     if (!(await checkChannelAdmin(ctx, channelId, user._id))) {
-      throw new Error("Only channel or cult admins can update channel details.");
+      throw new Error(
+        "Only channel or cult admins can update channel details.",
+      );
     }
 
     await ctx.db.patch(channelId, {
@@ -220,7 +242,9 @@ export const promoteToChannelAdmin = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -230,7 +254,9 @@ export const promoteToChannelAdmin = mutation({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", targetUserId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!membership) {
@@ -256,7 +282,9 @@ export const demoteChannelAdmin = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -269,7 +297,9 @@ export const demoteChannelAdmin = mutation({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", targetUserId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!membership || membership.role !== "admin") {
@@ -291,12 +321,16 @@ export const regenerateChannelJoinCode = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
     if (!(await checkChannelAdmin(ctx, channelId, user._id))) {
-      throw new Error("Only channel or cult admins can regenerate the join code.");
+      throw new Error(
+        "Only channel or cult admins can regenerate the join code.",
+      );
     }
 
     const conflict = await ctx.db
@@ -323,7 +357,9 @@ export const deleteChannel = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -334,6 +370,96 @@ export const deleteChannel = mutation({
       throw new Error("Only cult admins can delete a channel.");
     }
 
+    // Delete channel profile photo from storage
+    if (channel.channelProfile) {
+      await deleteOldImage(ctx, channel.channelProfile);
+    }
+
     await ctx.db.delete(channelId);
+  },
+});
+
+// ! ─── Storage / Channel Profile Photo Upload ─────────────────────────────────
+
+/**
+ * Update channel's profile photo after successful upload
+ */
+export const updateChannelProfilePhoto = mutation({
+  args: {
+    channelId: v.id("channel"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { channelId, storageId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const channel = await ctx.db.get(channelId);
+    if (!channel) throw new Error("Channel not found.");
+
+    if (!(await checkChannelAdmin(ctx, channelId, user._id))) {
+      throw new Error("Only channel or cult admins can update channel profile photo.");
+    }
+
+    // Get the URL of the uploaded file
+    const imageUrl = await ctx.storage.getUrl(storageId);
+    if (!imageUrl) throw new Error("Failed to get uploaded file URL");
+
+    // Delete old profile photo
+    await deleteOldImage(ctx, channel.channelProfile);
+
+    // Update the channel's profile with the new photo URL
+    await ctx.db.patch(channelId, {
+      channelProfile: imageUrl,
+      updatedAt: Date.now(),
+    });
+
+    return { imageUrl };
+  },
+});
+
+/**
+ * Delete channel's profile photo
+ */
+export const deleteChannelProfilePhoto = mutation({
+  args: {
+    channelId: v.id("channel"),
+  },
+  handler: async (ctx, { channelId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    const channel = await ctx.db.get(channelId);
+    if (!channel) throw new Error("Channel not found.");
+
+    if (!(await checkChannelAdmin(ctx, channelId, user._id))) {
+      throw new Error("Only channel or cult admins can delete channel profile photo.");
+    }
+
+    // Delete the file from storage
+    await deleteOldImage(ctx, channel.channelProfile);
+
+    // Reset to empty string
+    await ctx.db.patch(channelId, {
+      channelProfile: "",
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });

@@ -29,7 +29,7 @@ export const getConversationBetweenUsers = query({
     return allConvs.find(
       (c) =>
         (c.memberOne === userId1 && c.memberTwo === userId2) ||
-        (c.memberOne === userId2 && c.memberTwo === userId1)
+        (c.memberOne === userId2 && c.memberTwo === userId1),
     );
   },
 });
@@ -50,11 +50,11 @@ export const listConversationsForUser = query({
     const convs = [...convsAsMemberOne, ...convsAsMemberTwo];
 
     const otherUserIds = convs.map((c) =>
-      c.memberOne === userId ? c.memberTwo : c.memberOne
+      c.memberOne === userId ? c.memberTwo : c.memberOne,
     );
 
     const otherUsers = await Promise.all(
-      otherUserIds.map((id) => ctx.db.get(id))
+      otherUserIds.map((id) => ctx.db.get(id)),
     );
 
     return convs.map((c, i) => ({
@@ -78,9 +78,7 @@ export const createConversation = mutation({
       .query("conversations")
       .withIndex("byMemberOne", (q: any) => q.eq("memberOne", memberOneId))
       .collect()
-      .then((convs) =>
-        convs.find((c) => c.memberTwo === memberTwoId)
-      );
+      .then((convs) => convs.find((c) => c.memberTwo === memberTwoId));
 
     if (existing) {
       return existing._id;
@@ -119,7 +117,7 @@ export const getOrCreateConversation = mutation({
     const existing = [...conv1, ...conv2].find(
       (c) =>
         (c.memberOne === memberOneId && c.memberTwo === memberTwoId) ||
-        (c.memberOne === memberTwoId && c.memberTwo === memberOneId)
+        (c.memberOne === memberTwoId && c.memberTwo === memberOneId),
     );
 
     if (existing) {
@@ -144,7 +142,9 @@ export const deleteConversation = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 

@@ -4,7 +4,9 @@ import { mutation, query } from "./_generated/server";
 async function assertCultAdmin(ctx: any, cultId: any, userId: any) {
   const membership = await ctx.db
     .query("cultMembers")
-    .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+    .withIndex("byCultAndUser", (q: any) =>
+      q.eq("cultId", cultId).eq("userId", userId),
+    )
     .unique();
 
   if (!membership || membership.role !== "admin") {
@@ -16,7 +18,9 @@ async function assertCultAdmin(ctx: any, cultId: any, userId: any) {
 async function getCultMemberRole(ctx: any, cultId: any, userId: any) {
   const membership = await ctx.db
     .query("cultMembers")
-    .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+    .withIndex("byCultAndUser", (q: any) =>
+      q.eq("cultId", cultId).eq("userId", userId),
+    )
     .unique();
   return membership?.role ?? null;
 }
@@ -26,11 +30,22 @@ export const getMembership = query({
   handler: async (ctx, { cultId, userId }) => {
     return await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+      .withIndex("byCultAndUser", (q: any) =>
+        q.eq("cultId", cultId).eq("userId", userId),
+      )
       .unique();
   },
 });
 
+export const isCultMember = query({
+  args: { cultId: v.id("cult"), userId: v.id("users") },
+  handler: async (ctx, { cultId, userId }) => {
+    const role = await getCultMemberRole(ctx, cultId, userId);
+    return (
+     role === "admin" || role === "member"
+    );
+  },
+});
 export const isAdmin = query({
   args: { cultId: v.id("cult"), userId: v.id("users") },
   handler: async (ctx, { cultId, userId }) => {
@@ -55,7 +70,7 @@ export const listMembers = query({
       .collect();
 
     const users = await Promise.all(
-      memberships.map((m) => ctx.db.get(m.userId))
+      memberships.map((m) => ctx.db.get(m.userId)),
     );
 
     return memberships.map((m, i) => ({
@@ -92,7 +107,7 @@ export const listCultsForUser = query({
       .collect();
 
     const cults = await Promise.all(
-      memberships.map((m) => ctx.db.get(m.cultId))
+      memberships.map((m) => ctx.db.get(m.cultId)),
     );
 
     return memberships.map((m, i) => ({
@@ -110,7 +125,9 @@ export const join = mutation({
   handler: async (ctx, { cultId, userId }) => {
     const existing = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q) => q.eq("cultId", cultId).eq("userId", userId))
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", userId),
+      )
       .unique();
 
     if (existing) {
@@ -125,13 +142,50 @@ export const join = mutation({
     });
   },
 });
+export const joinAsAdmin = mutation({
+  args: {
+    cultId: v.id("cult"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { cultId, userId }) => {
+    const existing = await ctx.db
+      .query("cultMembers")
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", userId),
+      )
+      .unique();
+
+    if (existing) {
+      throw new Error("You are already a member of this cult.");
+    }
+
+    return await ctx.db.insert("cultMembers", {
+      cultId,
+      userId,
+      role: "admin",
+      joinedAt: Date.now(),
+    });
+  },
+});
 
 export const joinByCode = mutation({
   args: {
     joinCode: v.string(),
-    userId: v.id("users"),
   },
-  handler: async (ctx, { joinCode, userId }) => {
+  handler: async (ctx, { joinCode }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Unauthenticated.");
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex(
+        "byClerkUserId",
+        (q) => q.eq("clerkUserId", identity.subject), // Clerk's subject = clerkUserId
+      )
+      .unique();
+
+    if (!user) throw new Error("User not found.");
+
     const cult = await ctx.db
       .query("cult")
       .withIndex("byJoinCode", (q) => q.eq("joinCode", joinCode))
@@ -141,16 +195,16 @@ export const joinByCode = mutation({
 
     const existing = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q) => q.eq("cultId", cult._id).eq("userId", userId))
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cult._id).eq("userId", user._id),
+      )
       .unique();
 
-    if (existing) {
-      throw new Error("You are already a member of this cult.");
-    }
+    if (existing) throw new Error("You are already a member of this cult.");
 
     await ctx.db.insert("cultMembers", {
       cultId: cult._id,
-      userId,
+      userId: user._id,
       role: "member",
       joinedAt: Date.now(),
     });
@@ -171,7 +225,9 @@ export const leave = mutation({
 
     const targetMembership = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q) => q.eq("cultId", cultId).eq("userId", target))
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", target),
+      )
       .unique();
 
     if (!targetMembership) {
@@ -190,7 +246,9 @@ export const leave = mutation({
         .then((ms) => ms.filter((m) => m.role === "admin"));
 
       if (allAdmins.length === 1) {
-        throw new Error("Transfer admin privileges before leaving — you are the last admin.");
+        throw new Error(
+          "Transfer admin privileges before leaving — you are the last admin.",
+        );
       }
     }
 
@@ -209,7 +267,9 @@ export const promoteToAdmin = mutation({
 
     const targetMembership = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q) => q.eq("cultId", cultId).eq("userId", targetUserId))
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!targetMembership) {
@@ -239,7 +299,9 @@ export const demoteAdmin = mutation({
 
     const targetMembership = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q) => q.eq("cultId", cultId).eq("userId", targetUserId))
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!targetMembership || targetMembership.role !== "admin") {
