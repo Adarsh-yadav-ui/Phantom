@@ -25,6 +25,7 @@ export default function RootLayout({
       lang="en"
       className={`${josefinSans.className} ${josefinSans.style} h-full antialiased`}
     >
+
       <body className="min-h-full flex flex-col">
         <ClerkProvider>
           <ConvexClientProvider>{children}</ConvexClientProvider>
