@@ -4,7 +4,9 @@ import { mutation, query } from "./_generated/server";
 async function isCultAdmin(ctx: any, cultId: any, userId: any) {
   const membership = await ctx.db
     .query("cultMembers")
-    .withIndex("byCultAndUser", (q: any) => q.eq("cultId", cultId).eq("userId", userId))
+    .withIndex("byCultAndUser", (q: any) =>
+      q.eq("cultId", cultId).eq("userId", userId),
+    )
     .unique();
   return membership?.role === "admin";
 }
@@ -17,9 +19,21 @@ async function isChannelAdmin(ctx: any, channelId: any, userId: any) {
 
   const membership = await ctx.db
     .query("channelMembers")
-    .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", userId))
+    .withIndex("byChannelAndUser", (q: any) =>
+      q.eq("channelId", channelId).eq("userId", userId),
+    )
     .unique();
   return membership?.role === "admin";
+}
+
+async function getChannelMemberRole(ctx: any, channelId: any, userId: any) {
+  const membership = await ctx.db
+    .query("channelMembers")
+    .withIndex("byChannelAndUser", (q: any) =>
+      q.eq("channelId", channelId).eq("userId", userId),
+    )
+    .unique();
+  return membership?.role ?? null;
 }
 
 export const getMembership = query({
@@ -27,7 +41,9 @@ export const getMembership = query({
   handler: async (ctx, { channelId, userId }) => {
     return await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", userId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", userId),
+      )
       .unique();
   },
 });
@@ -49,7 +65,9 @@ export const isMember = query({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", userId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", userId),
+      )
       .unique();
     return !!membership;
   },
@@ -64,7 +82,7 @@ export const listMembers = query({
       .collect();
 
     const users = await Promise.all(
-      memberships.map((m) => ctx.db.get(m.userId))
+      memberships.map((m) => ctx.db.get(m.userId)),
     );
 
     return memberships.map((m, i) => ({
@@ -83,7 +101,7 @@ export const listChannelsForUser = query({
       .collect();
 
     const channels = await Promise.all(
-      memberships.map((m) => ctx.db.get(m.channelId))
+      memberships.map((m) => ctx.db.get(m.channelId)),
     );
 
     return memberships.map((m, i) => ({
@@ -95,28 +113,47 @@ export const listChannelsForUser = query({
 
 export const join = mutation({
   args: {
-    channelId: v.id("channel"),
+    cultId: v.id("cult"),
     userId: v.id("users"),
   },
-  handler: async (ctx, { channelId, userId }) => {
+  handler: async (ctx, { cultId, userId }) => {
     const existing = await ctx.db
-      .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", userId))
+      .query("cultMembers")
+      .withIndex("byCultAndUser", (q: any) =>
+        q.eq("cultId", cultId).eq("userId", userId),
+      )
       .unique();
 
-    if (existing) {
-      throw new Error("You are already a member of this channel.");
-    }
+    if (existing) throw new Error("You are already a member of this cult.");
 
-    return await ctx.db.insert("channelMembers", {
-      channelId,
+    const now = Date.now();
+
+    await ctx.db.insert("cultMembers", {
+      cultId,
       userId,
       role: "member",
-      joinedAt: Date.now(),
+      joinedAt: now,
     });
+
+    // Auto-enroll into all public channels of this cult
+    const publicChannels = await ctx.db
+      .query("channel")
+      .withIndex("byCultId", (q: any) => q.eq("cultId", cultId))
+      .filter((q: any) => q.eq(q.field("visibility"), "public"))
+      .collect();
+
+    await Promise.all(
+      publicChannels.map((channel) =>
+        ctx.db.insert("channelMembers", {
+          channelId: channel._id,
+          userId,
+          role: "member",
+          joinedAt: now,
+        }),
+      ),
+    );
   },
 });
-
 export const joinByCode = mutation({
   args: {
     joinCode: v.string(),
@@ -132,7 +169,9 @@ export const joinByCode = mutation({
 
     const existing = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channel._id).eq("userId", userId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channel._id).eq("userId", userId),
+      )
       .unique();
 
     if (existing) {
@@ -168,7 +207,9 @@ export const leave = mutation({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", target))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", target),
+      )
       .unique();
 
     if (!membership) {
@@ -192,7 +233,9 @@ export const promoteToAdmin = mutation({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", targetUserId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!membership) {
@@ -224,7 +267,9 @@ export const demoteAdmin = mutation({
 
     const membership = await ctx.db
       .query("channelMembers")
-      .withIndex("byChannelAndUser", (q: any) => q.eq("channelId", channelId).eq("userId", targetUserId))
+      .withIndex("byChannelAndUser", (q: any) =>
+        q.eq("channelId", channelId).eq("userId", targetUserId),
+      )
       .unique();
 
     if (!membership || membership.role !== "admin") {
@@ -232,5 +277,63 @@ export const demoteAdmin = mutation({
     }
 
     await ctx.db.patch(membership._id, { role: "member" });
+  },
+});
+
+export const isChannelMember = query({
+  args: { channelId: v.id("channel"), userId: v.id("users") },
+  handler: async (ctx, { channelId, userId }) => {
+    const role = await getChannelMemberRole(ctx, channelId, userId);
+    return role === "admin" || role === "member";
+  },
+});
+export const syncChannelMemberships = mutation({
+  args: {
+    cultId: v.id("cult"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, { cultId, userId }) => {
+    const cultMembership = await ctx.db
+      .query("cultMembers")
+      .withIndex("byCultAndUser", (q) =>
+        q.eq("cultId", cultId).eq("userId", userId),
+      )
+      .unique();
+
+    if (!cultMembership) throw new Error("Not a cult member.");
+
+    const isCultAdmin = cultMembership.role === "admin";
+
+    // Admins get all channels, members only get public ones
+    const allChannels = await ctx.db
+      .query("channel")
+      .withIndex("byCultId", (q) => q.eq("cultId", cultId))
+      .collect();
+
+    const eligibleChannels = isCultAdmin
+      ? allChannels
+      : allChannels.filter((ch) => ch.visibility === "public");
+
+    const now = Date.now();
+
+    await Promise.all(
+      eligibleChannels.map(async (channel) => {
+        const existing = await ctx.db
+          .query("channelMembers")
+          .withIndex("byChannelAndUser", (q) =>
+            q.eq("channelId", channel._id).eq("userId", userId),
+          )
+          .unique();
+
+        if (existing) return; // already a member, skip
+
+        await ctx.db.insert("channelMembers", {
+          channelId: channel._id,
+          userId,
+          role: isCultAdmin ? "admin" : "member",
+          joinedAt: now,
+        });
+      }),
+    );
   },
 });
