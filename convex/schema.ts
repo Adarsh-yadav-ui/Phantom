@@ -42,15 +42,15 @@ export default defineSchema({
 
   channel: defineTable({
     cultId: v.id("cult"),
-    channelProfile: v.string(),
     channelName: v.string(),
-    channelDesc: v.string(),
+    channelDesc: v.string(), 
     joinCode: v.string(),
     type: v.union(
       v.literal("text"),
       v.literal("voice"),
       v.literal("announcement"),
     ),
+    visibility: v.union(v.literal("public"), v.literal("private")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

@@ -19,13 +19,14 @@ import { useState } from "react";
 import { nanoid } from "nanoid";
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload";
 import { z } from "zod";
+import { CircleAlert } from "lucide-react";
 
-// ─── Steps config ────────────────────────────────────────────────────────────
+// ─── Steps config ─────────────────────────────────────────────────────────────
 const STEPS = [
   {
     id: "name",
     label: "Name Your Cult",
-    description: "Give your cult a powerful name (at least 3 letter).",
+    description: "Give your cult a powerful name (at least 3 letters).",
   },
   {
     id: "desc",
@@ -35,24 +36,22 @@ const STEPS = [
   {
     id: "photo",
     label: "Choose a Symbol",
-    description: "Upload a profile photo for your cult.",
+    description: "Upload a profile photo for your cult (optional).",
   },
 ];
 
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+const cultNameSchema = z.string().min(3, "Title cannot be less than 3 letters");
+const cultDescSchema = z
+  .string()
+  .min(1, "Description cannot be empty.")
+  .max(180, "Description must be 180 characters or fewer.");
+
+const getFirstError = (err: z.ZodError): string =>
+  err?.issues?.[0]?.message ?? "Invalid value.";
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export function CultCreationForm() {
-  // Schemas inside component to avoid Turbopack module-level init issues
-  const cultNameSchema = z
-    .string()
-    .min(3, "Title cannot be less than 3 letters");
-
-  const cultDescSchema = z
-    .string()
-    .min(1, "Description cannot be empty.")
-    .max(180, "Description must be 180 characters or fewer.");
-
-  const getFirstError = (err: z.ZodError): string =>
-    err?.issues?.[0]?.message ?? "Invalid value.";
-
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [cultName, setCultName] = useState("");
@@ -63,9 +62,8 @@ export function CultCreationForm() {
 
   const currentUser = useQuery(api.users.current);
   const createCult = useMutation(api.cult.createCult);
-  const joinAsAdmin = useMutation(api.cultMembers.joinAsAdmin);
 
-  // Reset on dialog close
+  // ── Reset ──────────────────────────────────────────────────────────────────
   const handleOpenChange = (val: boolean) => {
     setOpen(val);
     if (!val) {
@@ -77,10 +75,9 @@ export function CultCreationForm() {
     }
   };
 
-  // Validate current step and advance
+  // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNext = () => {
     setError(null);
-
     if (step === 0) {
       const result = cultNameSchema.safeParse(cultName);
       if (!result.success) {
@@ -88,7 +85,6 @@ export function CultCreationForm() {
         return;
       }
     }
-
     if (step === 1) {
       const result = cultDescSchema.safeParse(cultDesc);
       if (!result.success) {
@@ -96,7 +92,6 @@ export function CultCreationForm() {
         return;
       }
     }
-
     setStep((s) => s + 1);
   };
 
@@ -105,16 +100,17 @@ export function CultCreationForm() {
     setStep((s) => s - 1);
   };
 
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!currentUser) return;
 
-    // Final validation
     const nameResult = cultNameSchema.safeParse(cultName);
     if (!nameResult.success) {
       setStep(0);
       setError(getFirstError(nameResult.error));
       return;
     }
+
     const descResult = cultDescSchema.safeParse(cultDesc);
     if (!descResult.success) {
       setStep(1);
@@ -125,13 +121,7 @@ export function CultCreationForm() {
     setIsSubmitting(true);
     try {
       const joinCode = nanoid();
-      await createCult({
-        cultName,
-        cultDesc,
-        joinCode,
-        cultProfile,
-      });
-
+      await createCult({ cultName, cultDesc, joinCode, cultProfile });
       handleOpenChange(false);
     } catch (err) {
       setError("Something went wrong. Please try again.");
@@ -215,18 +205,19 @@ export function CultCreationForm() {
 
           {step === 2 && (
             <ProfilePhotoUpload
-              entityType="user"
-              onUploadComplete={async (url: any) => {
-                await console.log(url);
-                await setCultProfile(url);
-              }}
-              onUploadError={(err: any) => console.error(err)}
+              entityType="cult"
+              // ✅ uploadOnly: auto-uploads on file select, never blocks "Create Cult"
+              uploadOnly
+              onUploadComplete={(url) => setCultProfile(url)}
+              onUploadError={(err) => setError(err)}
             />
           )}
 
-          {/* Error message */}
           {error && (
-            <p className="text-sm text-red-600 font-medium -mt-1">{error}</p>
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm animate-in fade-in slide-in-from-top-1 duration-200">
+              <CircleAlert className="w-4 h-4 shrink-0 text-red-500" />
+              <p className="font-medium leading-snug mt-1">{error}</p>
+            </div>
           )}
         </div>
 
@@ -242,9 +233,9 @@ export function CultCreationForm() {
               </Button>
             )}
           </div>
-
           <div>
             {isLastStep ? (
+              // ✅ Only disabled while submitting — photo upload state is internal
               <Button onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? "Creating..." : "Create Cult"}
               </Button>

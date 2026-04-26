@@ -5,7 +5,7 @@ async function canAccessSource(
   ctx: any,
   sourceType: string,
   sourceId: string,
-  userId: any
+  userId: any,
 ) {
   if (sourceType === "dm") {
     const conv = await ctx.db.get(sourceId as any);
@@ -16,7 +16,9 @@ async function canAccessSource(
   if (sourceType === "group") {
     const membership = await ctx.db
       .query("groupMembers")
-      .withIndex("byGroupAndUser", (q: any) => q.eq("groupId", sourceId as any).eq("userId", userId))
+      .withIndex("byGroupAndUser", (q: any) =>
+        q.eq("groupId", sourceId as any).eq("userId", userId),
+      )
       .unique();
     return !!membership;
   }
@@ -27,7 +29,9 @@ async function canAccessSource(
 
     const cultMembership = await ctx.db
       .query("cultMembers")
-      .withIndex("byCultAndUser", (q: any) => q.eq("cultId", channel.cultId).eq("userId", userId))
+      .withIndex("byCultAndUser", (q: any) =>
+        q.eq("cultId", channel.cultId).eq("userId", userId),
+      )
       .unique();
     return !!cultMembership;
   }
@@ -59,7 +63,9 @@ export const listMessagesBySource = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) return [];
 
@@ -71,7 +77,7 @@ export const listMessagesBySource = query({
     let allMessages = await ctx.db
       .query("messages")
       .withIndex("bySourceTypeAndId", (q: any) =>
-        q.eq("sourceType", sourceType).eq("sourceId", sourceId)
+        q.eq("sourceType", sourceType).eq("sourceId", sourceId),
       )
       .order("desc")
       .collect();
@@ -91,16 +97,24 @@ export const listMessagesBySource = query({
     const nextCursor = hasMore ? messages[messages.length - 1]?._id : undefined;
 
     const senderIds = [...new Set(messages.map((m: any) => m.senderId))];
-    const senders = await Promise.all(senderIds.map((id: any) => ctx.db.get(id)));
-    const senderMap = new Map(senderIds.map((id: any, i: number) => [id, senders[i]]));
+    const senders = await Promise.all(
+      senderIds.map((id: any) => ctx.db.get(id)),
+    );
+    const senderMap = new Map(
+      senderIds.map((id: any, i: number) => [id, senders[i]]),
+    );
 
     const replyToIds = messages
       .map((m: any) => m.replyTo)
       .filter((id: any): id is any => id !== undefined);
 
-    const replies = await Promise.all(replyToIds.map((id: any) => ctx.db.get(id)));
+    const replies = await Promise.all(
+      replyToIds.map((id: any) => ctx.db.get(id)),
+    );
     const replyMap = new Map<any, any>(
-      replyToIds.map((id: any, i: number) => [id, replies[i]] as [any, any]).filter(([, r]) => r !== null)
+      replyToIds
+        .map((id: any, i: number) => [id, replies[i]] as [any, any])
+        .filter(([, r]) => r !== null),
     );
 
     return {
@@ -127,7 +141,9 @@ export const listReplies = query({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) return { messages: [], hasMore: false };
 
@@ -139,7 +155,7 @@ export const listReplies = query({
         ctx,
         parentMessage.sourceType,
         parentMessage.sourceId,
-        user._id
+        user._id,
       ))
     ) {
       throw new Error("You do not have access to this message.");
@@ -167,8 +183,12 @@ export const listReplies = query({
     const nextCursor = hasMore ? messages[messages.length - 1]?._id : undefined;
 
     const senderIds = [...new Set(messages.map((m: any) => m.senderId))];
-    const senders = await Promise.all(senderIds.map((id: any) => ctx.db.get(id)));
-    const senderMap = new Map(senderIds.map((id: any, i: number) => [id, senders[i]]));
+    const senders = await Promise.all(
+      senderIds.map((id: any) => ctx.db.get(id)),
+    );
+    const senderMap = new Map(
+      senderIds.map((id: any, i: number) => [id, senders[i]]),
+    );
 
     return {
       messages: messages.map((m: any) => ({
@@ -196,14 +216,16 @@ export const sendMessage = mutation({
   },
   handler: async (
     ctx,
-    { sourceType, sourceId, content, images, document, replyTo }
+    { sourceType, sourceId, content, images, document, replyTo },
   ) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -214,7 +236,8 @@ export const sendMessage = mutation({
     if (replyTo) {
       const parentMessage = await ctx.db.get(replyTo);
       if (!parentMessage) throw new Error("Reply target not found.");
-      if (parentMessage.deleted) throw new Error("Cannot reply to a deleted message.");
+      if (parentMessage.deleted)
+        throw new Error("Cannot reply to a deleted message.");
     }
 
     const now = Date.now();
@@ -257,7 +280,9 @@ export const editMessage = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
@@ -288,7 +313,9 @@ export const deleteMessage = mutation({
 
     const user = await ctx.db
       .query("users")
-      .withIndex("byClerkUserId", (q: any) => q.eq("clerkUserId", identity.subject))
+      .withIndex("byClerkUserId", (q: any) =>
+        q.eq("clerkUserId", identity.subject),
+      )
       .unique();
     if (!user) throw new Error("User not found");
 
